@@ -2,10 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dev Kanban</title>
+    <title>Dev Kanban Pro - Final Edition</title>
     <style>
-        :root { --bg: #0079bf; --col: #ebedf0; --card: #fff; --accent: #0052cc; --danger: #eb5a46; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        :root { --bg: #0079bf; --col: #ebedf0; --card: #fff; --accent: #0052cc; --danger: #eb5a46; --success: #5aac44; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #172b4d; }
+        
+        /* Header Controls */
+        .header-controls { margin-bottom: 20px; display: flex; gap: 10px; background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; }
+        .header-controls button { background: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .header-controls button:hover { background: #f4f5f7; }
+
         .board { display: flex; gap: 15px; overflow-x: auto; align-items: flex-start; }
         .column { background: var(--col); border-radius: 8px; width: 300px; flex-shrink: 0; min-height: 200px; padding: 10px; display: flex; flex-direction: column; }
         .col-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 10px; padding: 5px; }
@@ -16,7 +22,7 @@
         }
         .card:active { cursor: grabbing; }
         .card-meta { font-size: 0.75rem; color: #666; margin-top: 5px; display: flex; gap: 10px; }
-        .done-check { position: absolute; top: 10px; right: 10px; cursor: pointer; transform: scale(1.2); }
+        .done-check, .restore-check { position: absolute; top: 10px; right: 10px; cursor: pointer; transform: scale(1.2); }
 
         /* Archive Section */
         .archive-wrapper { border-top: 2px solid #ccc; margin-top: auto; padding-top: 10px; }
@@ -24,7 +30,6 @@
         .archive-content { display: none; margin-top: 10px; }
         .archive-content.open { display: block; }
         .card.archived { opacity: 0.7; background: #f4f5f7; cursor: default; }
-        .restore-check { position: absolute; top: 10px; right: 10px; cursor: pointer; transform: scale(1.2); }
 
         /* Modal */
         #modalOverlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; }
@@ -33,12 +38,17 @@
         .subtask-item { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
         .subtask-item input[type="text"] { flex-grow: 1; border: 1px solid #ddd; padding: 3px; }
         .btn { padding: 8px 15px; cursor: pointer; border: none; border-radius: 4px; }
-        .btn-save { background: #5aac44; color: white; width: 100%; font-weight: bold; }
+        .btn-save { background: var(--success); color: white; width: 100%; font-weight: bold; }
         .btn-add { background: #eee; margin-top: 5px; }
-        .btn-danger { background: var(--danger); color: white; font-size: 0.7rem; margin-top: 10px; width: 100%; }
     </style>
 </head>
 <body>
+
+    <div class="header-controls">
+        <button onclick="exportData()">📤 Export Backup (JSON)</button>
+        <button onclick="document.getElementById('fileInput').click()">📥 Import Backup</button>
+        <input type="file" id="fileInput" style="display:none" onchange="importData(event)">
+    </div>
 
     <div class="board" id="board"></div>
 
@@ -46,7 +56,7 @@
         <div class="modal">
             <h2 id="mTitle">Task Details</h2>
             <label>Notes:</label>
-            <textarea id="mNotes" placeholder="Additional notes..."></textarea>
+            <textarea id="mNotes"></textarea>
             <label>Subtasks:</label>
             <div id="subtaskContainer"></div>
             <button class="btn btn-add" onclick="addSubtask()">+ Add Subtask</button>
@@ -56,7 +66,6 @@
     </div>
 
     <script>
-        // Configuration
         const COLUMNS = [
             { id: 'todo', title: 'To Do' },
             { id: 'doing', title: 'In Progress' },
@@ -64,80 +73,80 @@
             { id: 'done', title: 'Done' }
         ];
 
-        // Global State
-        let state = JSON.parse(localStorage.getItem('kanban_v4')) || { 
-            tasks: [], 
-            archived: [], 
-            archiveOpen: false 
-        };
+        let state = JSON.parse(localStorage.getItem('kanban_v5')) || { tasks: [], archived: [], archiveOpen: false };
         let currentEditId = null;
 
         function saveState() {
-            localStorage.setItem('kanban_v4', JSON.stringify(state));
+            localStorage.setItem('kanban_v5', JSON.stringify(state));
             render();
         }
 
+        // --- BACKUP LOGIC ---
+        function exportData() {
+            const dataStr = JSON.stringify(state, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `kanban_backup_${new Date().toISOString().slice(0,10)}.json`;
+            link.click();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedState = JSON.parse(e.target.result);
+                    if (confirm("This will overwrite your current board. Continue?")) {
+                        state = importedState;
+                        saveState();
+                    }
+                } catch (err) { alert("Invalid JSON file."); }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- TASK LOGIC ---
         function addTask(colId) {
             const title = prompt("Task Title:");
             if (!title) return;
-            state.tasks.push({
-                id: 'id-' + Date.now(),
-                title: title,
-                status: colId,
-                notes: '',
-                subtasks: []
-            });
+            state.tasks.push({ id: 'id-' + Date.now(), title: title, status: colId, notes: '', subtasks: [] });
             saveState();
         }
 
-        // Archive and Restore logic
         function archiveTask(id) {
-            const index = state.tasks.findIndex(t => t.id === id);
-            if (index > -1) {
-                const task = state.tasks.splice(index, 1)[0];
-                state.archived.push(task);
-                saveState();
-            }
+            const idx = state.tasks.findIndex(t => t.id === id);
+            if (idx > -1) { state.archived.push(state.tasks.splice(idx, 1)[0]); saveState(); }
         }
 
         function restoreTask(id) {
-            const index = state.archived.findIndex(t => t.id === id);
-            if (index > -1) {
-                const task = state.archived.splice(index, 1)[0];
-                task.status = 'done'; // Always restore to 'done' column
-                state.tasks.push(task);
-                saveState();
+            const idx = state.archived.findIndex(t => t.id === id);
+            if (idx > -1) { 
+                const task = state.archived.splice(idx, 1)[0];
+                task.status = 'done';
+                state.tasks.push(task); 
+                saveState(); 
             }
         }
 
-        function deleteFromArchive(id) {
-            if(confirm('Delete from archive permanently?')) {
-                state.archived = state.archived.filter(t => t.id !== id);
-                saveState();
-            }
-        }
-
-        // Drag & Drop
+        // --- DRAG & DROP ---
         function allowDrop(ev) { ev.preventDefault(); }
         function drag(ev) { ev.dataTransfer.setData("text", ev.target.id); }
         function drop(ev) {
             ev.preventDefault();
             const id = ev.dataTransfer.getData("text");
-            const colElement = ev.target.closest('.column');
-            if (!colElement) return;
-            const targetCol = colElement.id;
+            const col = ev.target.closest('.column');
+            if (!col) return;
             const task = state.tasks.find(t => t.id === id);
-            if (task) {
-                task.status = targetCol;
-                saveState();
-            }
+            if (task) { task.status = col.id; saveState(); }
         }
 
-        // Modal Logic
-        function openModal(id, isArchived = false) {
+        // --- MODAL & RENDER ---
+        function openModal(id, isArchived) {
             currentEditId = id;
             const task = isArchived ? state.archived.find(t => t.id === id) : state.tasks.find(t => t.id === id);
-            if(!task) return;
             document.getElementById('mTitle').innerText = task.title;
             document.getElementById('mNotes').value = task.notes || '';
             const container = document.getElementById('subtaskContainer');
@@ -157,87 +166,60 @@
 
         function saveTaskDetails() {
             const task = state.tasks.find(t => t.id === currentEditId) || state.archived.find(t => t.id === currentEditId);
-            if(task) {
-                task.notes = document.getElementById('mNotes').value;
-                const rows = document.querySelectorAll('.subtask-item');
-                task.subtasks = Array.from(rows).map(row => ({
-                    text: row.querySelector('input[type="text"]').value,
-                    done: row.querySelector('input[type="checkbox"]').checked
-                }));
-            }
+            task.notes = document.getElementById('mNotes').value;
+            const rows = document.querySelectorAll('.subtask-item');
+            task.subtasks = Array.from(rows).map(row => ({
+                text: row.querySelector('input[type="text"]').value,
+                done: row.querySelector('input[type="checkbox"]').checked
+            }));
             document.getElementById('modalOverlay').style.display = 'none';
             saveState();
         }
 
-        // Main Render Function
         function render() {
             const board = document.getElementById('board');
             board.innerHTML = '';
 
             COLUMNS.forEach(col => {
                 const colEl = document.createElement('div');
-                colEl.className = 'column';
-                colEl.id = col.id;
-                colEl.ondragover = allowDrop;
-                colEl.ondrop = drop;
+                colEl.className = 'column'; colEl.id = col.id;
+                colEl.ondragover = allowDrop; colEl.ondrop = drop;
                 colEl.innerHTML = `<div class="col-header"><span>${col.title}</span><button onclick="addTask('${col.id}')">+</button></div>`;
                 
                 const taskList = document.createElement('div');
                 state.tasks.filter(t => t.status === col.id).forEach(t => {
-                    const doneCount = (t.subtasks || []).filter(s => s.done).length;
                     const card = document.createElement('div');
-                    card.className = 'card';
-                    card.draggable = true;
-                    card.id = t.id;
+                    card.className = 'card'; card.draggable = true; card.id = t.id;
                     card.ondragstart = drag;
-                    card.onclick = (e) => { if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') openModal(t.id); };
+                    card.onclick = (e) => { if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') openModal(t.id, false); };
                     card.oncontextmenu = (e) => { e.preventDefault(); if(confirm('Delete?')) { state.tasks = state.tasks.filter(x => x.id !== t.id); saveState(); }};
-
-                    let html = `<strong>${t.title}</strong>`;
-                    if (col.id === 'done') {
-                        html += `<input type="checkbox" class="done-check" title="Archive" onclick="archiveTask('${t.id}')">`;
-                    }
-                    html += `<div class="card-meta">
-                                ${(t.subtasks || []).length > 0 ? `☑ ${doneCount}/${t.subtasks.length}` : ''} 
-                                ${t.notes ? '📄 Notes' : ''}
-                             </div>`;
-                    card.innerHTML = html;
+                    
+                    card.innerHTML = `<strong>${t.title}</strong>` + 
+                        (col.id === 'done' ? `<input type="checkbox" class="done-check" title="Archive" onclick="archiveTask('${t.id}')">` : '') +
+                        `<div class="card-meta">${t.subtasks.length > 0 ? '☑ ' + t.subtasks.filter(s => s.done).length + '/' + t.subtasks.length : ''} ${t.notes ? '📄 Notes' : ''}</div>`;
                     taskList.appendChild(card);
                 });
                 colEl.appendChild(taskList);
 
-                // Archive section for Done column
                 if (col.id === 'done') {
-                    const arcWrapper = document.createElement('div');
-                    arcWrapper.className = 'archive-wrapper';
-                    arcWrapper.innerHTML = `<span class="archive-toggle" onclick="state.archiveOpen = !state.archiveOpen; saveState()">${state.archiveOpen ? '▲ Hide' : '▼ Show'} Archive (${state.archived.length})</span>`;
-                    
-                    const arcContent = document.createElement('div');
-                    arcContent.className = 'archive-content' + (state.archiveOpen ? ' open' : '');
+                    const arc = document.createElement('div');
+                    arc.className = 'archive-wrapper';
+                    arc.innerHTML = `<span class="archive-toggle" onclick="state.archiveOpen = !state.archiveOpen; saveState()">${state.archiveOpen ? '▲ Hide' : '▼ Show'} Archive (${state.archived.length})</span>`;
+                    const content = document.createElement('div');
+                    content.className = 'archive-content' + (state.archiveOpen ? ' open' : '');
                     state.archived.forEach(t => {
                         const aCard = document.createElement('div');
                         aCard.className = 'card archived';
-                        aCard.innerHTML = `<strong>${t.title}</strong><input type="checkbox" checked class="restore-check" title="Restore" onclick="restoreTask('${t.id}')"><div class="card-meta">Archived</div>`;
+                        aCard.innerHTML = `<strong>${t.title}</strong><input type="checkbox" checked class="restore-check" onclick="restoreTask('${t.id}')">`;
                         aCard.onclick = (e) => { if(e.target.tagName !== 'INPUT') openModal(t.id, true); };
-                        aCard.oncontextmenu = (e) => { e.preventDefault(); deleteFromArchive(t.id); };
-                        arcContent.appendChild(aCard);
+                        content.appendChild(aCard);
                     });
-                    
-                    if(state.archived.length > 0) {
-                        const clearBtn = document.createElement('button');
-                        clearBtn.className = 'btn btn-danger';
-                        clearBtn.innerText = 'Clear Archive';
-                        clearBtn.onclick = () => { if(confirm('Clear all?')) { state.archived = []; saveState(); }};
-                        arcContent.appendChild(clearBtn);
-                    }
-
-                    arcWrapper.appendChild(arcContent);
-                    colEl.appendChild(arcWrapper);
+                    arc.appendChild(content);
+                    colEl.appendChild(arc);
                 }
                 board.appendChild(colEl);
             });
         }
-
         render();
     </script>
 </body>
