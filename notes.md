@@ -20,6 +20,7 @@
 
 
 --
+
 Finished Example:
 
 # Task: Fix Authorization Header in API Client
