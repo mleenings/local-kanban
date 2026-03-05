@@ -90,4 +90,3 @@ Adjust CSS variables in the `<style>` block:
 ## ⚖️ License
 
 This project is licensed under the **MIT License**.
-```
