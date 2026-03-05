@@ -22,10 +22,15 @@ For maximum efficiency, use the board in combination with a structured file syst
 │
 ├── /_template               # BLUEPRINT: Copy this for every new task
 │   ├── notes.md             # Technical analysis, decisions & research
-│   └── DoD.md               # Local "Definition of Done" checklist
+│   └── dod.md               # Local "Definition of Done" checklist
 │
 └── /tasks                   # Active deep-dive task data
-    ├── /TASK-ID-name        # Example: TASK-101-auth-fix
+    ├── /TASK-ID-name        # EXAMPLE: Concrete task folder
+    │   ├── meta.md          # Filled with specific Jira links, PO contact, etc.
+    │   ├── notes.md         # Technical implementation details of the fix
+    │   ├── dod.md           # Checked checklist for this specific task
+    │   ├── error.log        # (Optional) Attached raw log data
+    │   ├── screenshot.png   # (Optional) Visual proof of the resolved bug 
     └── /archive             # Move finished task FOLDERS here manually
 ```
 
