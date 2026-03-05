@@ -1,5 +1,4 @@
-# Dev-Context-Board
-
+# Local Kanban Board
 A professional, offline-first Kanban board designed for software engineers who value deep task context and data sovereignty. This tool bridges the gap between visual high-level planning and low-level technical documentation.
 
 ## 🚀 Purpose
