@@ -2,15 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dev Kanban Pro - Final Edition</title>
+    <title>Dev Kanban Pro</title>
     <style>
         :root { --bg: #0079bf; --col: #ebedf0; --card: #fff; --accent: #0052cc; --danger: #eb5a46; --success: #5aac44; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #172b4d; }
         
-        /* Header Controls */
         .header-controls { margin-bottom: 20px; display: flex; gap: 10px; background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; }
         .header-controls button { background: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .header-controls button:hover { background: #f4f5f7; }
 
         .board { display: flex; gap: 15px; overflow-x: auto; align-items: flex-start; }
         .column { background: var(--col); border-radius: 8px; width: 300px; flex-shrink: 0; min-height: 200px; padding: 10px; display: flex; flex-direction: column; }
@@ -20,32 +18,34 @@
             background: var(--card); border-radius: 5px; padding: 12px; margin-bottom: 8px; 
             cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,0.2); position: relative;
         }
-        .card:active { cursor: grabbing; }
-        .card-meta { font-size: 0.75rem; color: #666; margin-top: 5px; display: flex; gap: 10px; }
+        
+        /* Label Badge Style */
+        .badge {
+            display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; 
+            color: white; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;
+        }
+
+        .card-meta { font-size: 0.75rem; color: #666; margin-top: 5px; display: flex; gap: 10px; align-items: center; }
         .done-check, .restore-check { position: absolute; top: 10px; right: 10px; cursor: pointer; transform: scale(1.2); }
 
-        /* Archive Section */
         .archive-wrapper { border-top: 2px solid #ccc; margin-top: auto; padding-top: 10px; }
         .archive-toggle { cursor: pointer; font-size: 0.8rem; color: #5e6c84; display: block; text-align: center; background: #dfe1e6; padding: 5px; border-radius: 3px; }
         .archive-content { display: none; margin-top: 10px; }
         .archive-content.open { display: block; }
-        .card.archived { opacity: 0.7; background: #f4f5f7; cursor: default; }
 
-        /* Modal */
         #modalOverlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; }
         .modal { background: white; padding: 25px; border-radius: 8px; width: 500px; max-width: 90%; max-height: 80vh; overflow-y: auto; }
-        textarea { width: 100%; height: 100px; margin: 10px 0; border: 1px solid #ccc; padding: 5px; box-sizing: border-box; font-family: inherit; }
+        textarea, select { width: 100%; margin: 10px 0; border: 1px solid #ccc; padding: 8px; box-sizing: border-box; font-family: inherit; }
         .subtask-item { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
         .subtask-item input[type="text"] { flex-grow: 1; border: 1px solid #ddd; padding: 3px; }
         .btn { padding: 8px 15px; cursor: pointer; border: none; border-radius: 4px; }
-        .btn-save { background: var(--success); color: white; width: 100%; font-weight: bold; }
-        .btn-add { background: #eee; margin-top: 5px; }
+        .btn-save { background: var(--success); color: white; width: 100%; font-weight: bold; margin-top: 15px; }
     </style>
 </head>
 <body>
 
     <div class="header-controls">
-        <button onclick="exportData()">📤 Export Backup (JSON)</button>
+        <button onclick="exportData()">📤 Export Backup</button>
         <button onclick="document.getElementById('fileInput').click()">📥 Import Backup</button>
         <input type="file" id="fileInput" style="display:none" onchange="importData(event)">
     </div>
@@ -55,17 +55,25 @@
     <div id="modalOverlay">
         <div class="modal">
             <h2 id="mTitle">Task Details</h2>
+            
+            <div id="labelSelectContainer">
+                <label>Project / Label:</label>
+                <select id="mLabel"></select>
+            </div>
+
             <label>Notes:</label>
             <textarea id="mNotes"></textarea>
+            
             <label>Subtasks:</label>
             <div id="subtaskContainer"></div>
-            <button class="btn btn-add" onclick="addSubtask()">+ Add Subtask</button>
-            <hr>
+            <button class="btn" style="background: #eee; margin-top:5px;" onclick="addSubtask()">+ Add Subtask</button>
+            
             <button class="btn btn-save" onclick="saveTaskDetails()">Save & Close</button>
         </div>
     </div>
 
     <script>
+        // --- CONFIGURATION ---
         const COLUMNS = [
             { id: 'backlog', title: 'Backlog' },
             { id: 'todo', title: 'To Do' },
@@ -75,46 +83,51 @@
             { id: 'done', title: 'Done' }
         ];
 
-        let state = JSON.parse(localStorage.getItem('kanban_v5')) || { tasks: [], archived: [], archiveOpen: false };
+        // Define your labels here. If empty [], the UI will hide label selectors.
+        const LABELS = [
+            { id: 'alpha', title: 'Alpha-Project', color: '#0052cc' },
+            { id: 'beta', title: 'Beta-Service', color: '#eb5a46' },
+            { id: 'infra', title: 'Infrastructure', color: '#5aac44' }
+        ];
+
+        let state = JSON.parse(localStorage.getItem('kanban_v6')) || { tasks: [], archived: [], archiveOpen: false };
         let currentEditId = null;
 
         function saveState() {
-            localStorage.setItem('kanban_v5', JSON.stringify(state));
+            localStorage.setItem('kanban_v6', JSON.stringify(state));
             render();
         }
 
-        // --- BACKUP LOGIC ---
         function exportData() {
-            const dataStr = JSON.stringify(state, null, 2);
-            const blob = new Blob([dataStr], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
+            const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
             const link = document.createElement('a');
-            link.href = url;
-            link.download = `kanban_backup_${new Date().toISOString().slice(0,10)}.json`;
+            link.href = URL.createObjectURL(blob);
+            link.download = `kanban_backup.json`;
             link.click();
         }
 
         function importData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    const importedState = JSON.parse(e.target.result);
-                    if (confirm("This will overwrite your current board. Continue?")) {
-                        state = importedState;
-                        saveState();
-                    }
-                } catch (err) { alert("Invalid JSON file."); }
+                    state = JSON.parse(e.target.result);
+                    saveState();
+                } catch (err) { alert("Invalid File"); }
             };
-            reader.readAsText(file);
+            reader.readAsText(event.target.files[0]);
         }
 
-        // --- TASK LOGIC ---
         function addTask(colId) {
             const title = prompt("Task Title:");
             if (!title) return;
-            state.tasks.push({ id: 'id-' + Date.now(), title: title, status: colId, notes: '', subtasks: [] });
+            state.tasks.push({ 
+                id: 'id-' + Date.now(), 
+                title: title, 
+                status: colId, 
+                notes: '', 
+                label: '', // Default no label
+                subtasks: [] 
+            });
             saveState();
         }
 
@@ -133,7 +146,6 @@
             }
         }
 
-        // --- DRAG & DROP ---
         function allowDrop(ev) { ev.preventDefault(); }
         function drag(ev) { ev.dataTransfer.setData("text", ev.target.id); }
         function drop(ev) {
@@ -145,12 +157,24 @@
             if (task) { task.status = col.id; saveState(); }
         }
 
-        // --- MODAL & RENDER ---
         function openModal(id, isArchived) {
             currentEditId = id;
             const task = isArchived ? state.archived.find(t => t.id === id) : state.tasks.find(t => t.id === id);
+            
             document.getElementById('mTitle').innerText = task.title;
             document.getElementById('mNotes').value = task.notes || '';
+            
+            // Handle Labels UI
+            const labelContainer = document.getElementById('labelSelectContainer');
+            const labelSelect = document.getElementById('mLabel');
+            if (LABELS.length > 0) {
+                labelContainer.style.display = 'block';
+                labelSelect.innerHTML = '<option value="">-- No Label --</option>' + 
+                    LABELS.map(l => `<option value="${l.id}" ${task.label === l.id ? 'selected' : ''}>${l.title}</option>`).join('');
+            } else {
+                labelContainer.style.display = 'none';
+            }
+
             const container = document.getElementById('subtaskContainer');
             container.innerHTML = '';
             (task.subtasks || []).forEach(st => createSubtaskRow(st.text, st.done));
@@ -169,6 +193,7 @@
         function saveTaskDetails() {
             const task = state.tasks.find(t => t.id === currentEditId) || state.archived.find(t => t.id === currentEditId);
             task.notes = document.getElementById('mNotes').value;
+            task.label = document.getElementById('mLabel').value;
             const rows = document.querySelectorAll('.subtask-item');
             task.subtasks = Array.from(rows).map(row => ({
                 text: row.querySelector('input[type="text"]').value,
@@ -196,9 +221,13 @@
                     card.onclick = (e) => { if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') openModal(t.id, false); };
                     card.oncontextmenu = (e) => { e.preventDefault(); if(confirm('Delete?')) { state.tasks = state.tasks.filter(x => x.id !== t.id); saveState(); }};
                     
-                    card.innerHTML = `<strong>${t.title}</strong>` + 
+                    // Find Label Info
+                    const labelInfo = LABELS.find(l => l.id === t.label);
+                    const labelHtml = labelInfo ? `<div class="badge" style="background:${labelInfo.color}">${labelInfo.title}</div>` : '';
+
+                    card.innerHTML = labelHtml + `<div><strong>${t.title}</strong></div>` + 
                         (col.id === 'done' ? `<input type="checkbox" class="done-check" title="Archive" onclick="archiveTask('${t.id}')">` : '') +
-                        `<div class="card-meta">${t.subtasks.length > 0 ? '☑ ' + t.subtasks.filter(s => s.done).length + '/' + t.subtasks.length : ''} ${t.notes ? '📄 Notes' : ''}</div>`;
+                        `<div class="card-meta">${t.subtasks.length > 0 ? '☑ ' + t.subtasks.filter(s => s.done).length + '/' + t.subtasks.length : ''} ${t.notes ? '📄' : ''}</div>`;
                     taskList.appendChild(card);
                 });
                 colEl.appendChild(taskList);
@@ -211,8 +240,10 @@
                     content.className = 'archive-content' + (state.archiveOpen ? ' open' : '');
                     state.archived.forEach(t => {
                         const aCard = document.createElement('div');
-                        aCard.className = 'card archived';
-                        aCard.innerHTML = `<strong>${t.title}</strong><input type="checkbox" checked class="restore-check" onclick="restoreTask('${t.id}')">`;
+                        aCard.className = 'card'; aCard.style.opacity = '0.7';
+                        const labelInfo = LABELS.find(l => l.id === t.label);
+                        const labelHtml = labelInfo ? `<div class="badge" style="background:${labelInfo.color}">${labelInfo.title}</div>` : '';
+                        aCard.innerHTML = labelHtml + `<strong>${t.title}</strong><input type="checkbox" checked class="restore-check" onclick="restoreTask('${t.id}')">`;
                         aCard.onclick = (e) => { if(e.target.tagName !== 'INPUT') openModal(t.id, true); };
                         content.appendChild(aCard);
                     });
