@@ -62,18 +62,43 @@ This board uses a **Lean 6-Column Pipeline** to keep the interface clean while m
 
 ## ⚙️ Customization
 
-Edit the `board.html` file to adapt the board. Current optimized setup:
+The board is designed to be easily configurable via the constant arrays at the top of the `<script>` section in the HTML file.
+
+### 1. Label System (Optional)
+The `LABELS` array allows you to define projects or categories with specific colors. If this array is empty (`[]`), all label-related UI elements will be hidden automatically.
+
+```javascript
+const LABELS = [
+    { id: 'alpha', title: 'Alpha-Project', color: '#0052cc' },
+    { id: 'beta', title: 'Beta-Service', color: '#eb5a46' }
+];
+```
+
+* **id**: Unique identifier stored within the task data.
+* **title**: Display name shown on cards and in the selection menu.
+* **color**: CSS color (Hex, RGB, or Name) for the badge background.
+
+### 2. Board Columns
+You can modify the `COLUMNS` array to match your specific workflow (e.g., adding a "Ready for Release" stage).
 
 ```javascript
 const COLUMNS = [
     { id: 'backlog', title: 'Backlog' },
-    { id: 'todo', title: 'To Do' },
-    { id: 'progress', title: 'In Progress' },
-    { id: 'verify', title: 'To Verify' },
-    { id: 'test_dev', title: 'Dev-Env Test' },
+    // ... add or remove stages here
     { id: 'done', title: 'Done' }
 ];
 ```
+
+---
+
+## 🛠 Technical Details
+
+- **Data Persistence**: Uses `localStorage` (Key: `kanban_v6`).
+- **Data Model**:
+  - `tasks`: Active tasks currently on the board.
+  - `archived`: Tasks moved to the archive.
+  - `archiveOpen`: Persistent UI state of the archive toggle.
+- **Label Mapping**: Tasks store only the label `id`. Visual properties (color/title) are mapped at runtime to ensure consistency across the application.
 
 ---
 
