@@ -10,16 +10,16 @@
         .header-controls { margin-bottom: 20px; display: flex; gap: 10px; background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; }
         .header-controls button { background: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
-        .board { display: flex; gap: 15px; overflow-x: auto; align-items: flex-start; }
+        .board { display: flex; gap: 15px; overflow-x: auto; align-items: flex-start; padding-bottom: 20px; }
         .column { background: var(--col); border-radius: 8px; width: 300px; flex-shrink: 0; min-height: 200px; padding: 10px; display: flex; flex-direction: column; }
-        .col-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 10px; padding: 5px; }
+        .col-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; margin-bottom: 10px; padding: 5px; }
         
         .card { 
             background: var(--card); border-radius: 5px; padding: 12px; margin-bottom: 8px; 
             cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,0.2); position: relative;
         }
+        .card:hover { border-right: 3px solid var(--accent); }
         
-        /* Label Badge Style */
         .badge {
             display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; 
             color: white; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;
@@ -32,14 +32,19 @@
         .archive-toggle { cursor: pointer; font-size: 0.8rem; color: #5e6c84; display: block; text-align: center; background: #dfe1e6; padding: 5px; border-radius: 3px; }
         .archive-content { display: none; margin-top: 10px; }
         .archive-content.open { display: block; }
+        .archive-actions { margin-top: 10px; display: flex; justify-content: center; }
 
         #modalOverlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; }
         .modal { background: white; padding: 25px; border-radius: 8px; width: 500px; max-width: 90%; max-height: 80vh; overflow-y: auto; }
         textarea, select { width: 100%; margin: 10px 0; border: 1px solid #ccc; padding: 8px; box-sizing: border-box; font-family: inherit; }
+        
         .subtask-item { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
         .subtask-item input[type="text"] { flex-grow: 1; border: 1px solid #ddd; padding: 3px; }
-        .btn { padding: 8px 15px; cursor: pointer; border: none; border-radius: 4px; }
+        
+        .btn { padding: 8px 15px; cursor: pointer; border: none; border-radius: 4px; font-size: 0.85rem; }
         .btn-save { background: var(--success); color: white; width: 100%; font-weight: bold; margin-top: 15px; }
+        .btn-delete-task { background: var(--danger); color: white; float: right; padding: 5px 10px; font-size: 0.7rem; }
+        .btn-clear-archive { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; width: 100%; margin-bottom: 10px; font-size: 0.75rem; padding: 5px; }
     </style>
 </head>
 <body>
@@ -54,26 +59,22 @@
 
     <div id="modalOverlay">
         <div class="modal">
+            <button class="btn btn-delete-task" onclick="deleteCurrentTask()">🗑️ Delete Task</button>
             <h2 id="mTitle">Task Details</h2>
-            
             <div id="labelSelectContainer">
                 <label>Project / Label:</label>
                 <select id="mLabel"></select>
             </div>
-
             <label>Notes:</label>
             <textarea id="mNotes"></textarea>
-            
             <label>Subtasks:</label>
             <div id="subtaskContainer"></div>
             <button class="btn" style="background: #eee; margin-top:5px;" onclick="addSubtask()">+ Add Subtask</button>
-            
             <button class="btn btn-save" onclick="saveTaskDetails()">Save & Close</button>
         </div>
     </div>
 
     <script>
-        // --- CONFIGURATION ---
         const COLUMNS = [
             { id: 'backlog', title: 'Backlog' },
             { id: 'todo', title: 'To Do' },
@@ -83,26 +84,26 @@
             { id: 'done', title: 'Done' }
         ];
 
-        // Define your labels here. If empty [], the UI will hide label selectors.
         const LABELS = [
             { id: 'alpha', title: 'Alpha-Project', color: '#0052cc' },
             { id: 'beta', title: 'Beta-Service', color: '#eb5a46' },
             { id: 'infra', title: 'Infrastructure', color: '#5aac44' }
         ];
 
-        let state = JSON.parse(localStorage.getItem('kanban_v6')) || { tasks: [], archived: [], archiveOpen: false };
+        let state = JSON.parse(localStorage.getItem('kanban_v8')) || { tasks: [], archived: [], archiveOpen: false };
         let currentEditId = null;
 
         function saveState() {
-            localStorage.setItem('kanban_v6', JSON.stringify(state));
+            localStorage.setItem('kanban_v8', JSON.stringify(state));
             render();
         }
 
+        // --- DATA MGMT ---
         function exportData() {
             const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `kanban_backup.json`;
+            link.download = `kanban_backup_${new Date().toISOString().split('T')[0]}.json`;
             link.click();
         }
 
@@ -112,23 +113,42 @@
                 try {
                     state = JSON.parse(e.target.result);
                     saveState();
-                } catch (err) { alert("Invalid File"); }
+                } catch (err) { alert("Invalid File Format"); }
             };
             reader.readAsText(event.target.files[0]);
         }
 
+        // --- TASK OPERATIONS ---
         function addTask(colId) {
             const title = prompt("Task Title:");
             if (!title) return;
-            state.tasks.push({ 
-                id: 'id-' + Date.now(), 
-                title: title, 
-                status: colId, 
-                notes: '', 
-                label: '', // Default no label
-                subtasks: [] 
-            });
+            state.tasks.push({ id: 'id-' + Date.now(), title, status: colId, notes: '', label: '', subtasks: [] });
             saveState();
+        }
+
+        function deleteCurrentTask() {
+            if (confirm("Delete this task permanently? This cannot be undone.")) {
+                state.tasks = state.tasks.filter(t => t.id !== currentEditId);
+                state.archived = state.archived.filter(t => t.id !== currentEditId);
+                document.getElementById('modalOverlay').style.display = 'none';
+                saveState();
+            }
+        }
+
+        function clearArchive() {
+            if (confirm(`Delete ALL ${state.archived.length} archived tasks permanently?`)) {
+                state.archived = [];
+                saveState();
+            }
+        }
+
+        function clearDoneTasks() {
+            if (confirm("Move ALL tasks in 'Done' to archive?")) {
+                const doneTasks = state.tasks.filter(t => t.status === 'done');
+                state.archived.push(...doneTasks);
+                state.tasks = state.tasks.filter(t => t.status !== 'done');
+                saveState();
+            }
         }
 
         function archiveTask(id) {
@@ -146,35 +166,32 @@
             }
         }
 
+        // --- DRAG & DROP ---
         function allowDrop(ev) { ev.preventDefault(); }
         function drag(ev) { ev.dataTransfer.setData("text", ev.target.id); }
         function drop(ev) {
             ev.preventDefault();
             const id = ev.dataTransfer.getData("text");
             const col = ev.target.closest('.column');
-            if (!col) return;
-            const task = state.tasks.find(t => t.id === id);
-            if (task) { task.status = col.id; saveState(); }
+            if (col) {
+                const task = state.tasks.find(t => t.id === id);
+                if (task) { task.status = col.id; saveState(); }
+            }
         }
 
+        // --- MODAL ---
         function openModal(id, isArchived) {
             currentEditId = id;
             const task = isArchived ? state.archived.find(t => t.id === id) : state.tasks.find(t => t.id === id);
-            
             document.getElementById('mTitle').innerText = task.title;
             document.getElementById('mNotes').value = task.notes || '';
-            
-            // Handle Labels UI
-            const labelContainer = document.getElementById('labelSelectContainer');
-            const labelSelect = document.getElementById('mLabel');
+            const lCont = document.getElementById('labelSelectContainer');
+            const lSel = document.getElementById('mLabel');
             if (LABELS.length > 0) {
-                labelContainer.style.display = 'block';
-                labelSelect.innerHTML = '<option value="">-- No Label --</option>' + 
+                lCont.style.display = 'block';
+                lSel.innerHTML = '<option value="">-- No Label --</option>' + 
                     LABELS.map(l => `<option value="${l.id}" ${task.label === l.id ? 'selected' : ''}>${l.title}</option>`).join('');
-            } else {
-                labelContainer.style.display = 'none';
-            }
-
+            } else { lCont.style.display = 'none'; }
             const container = document.getElementById('subtaskContainer');
             container.innerHTML = '';
             (task.subtasks || []).forEach(st => createSubtaskRow(st.text, st.done));
@@ -194,8 +211,7 @@
             const task = state.tasks.find(t => t.id === currentEditId) || state.archived.find(t => t.id === currentEditId);
             task.notes = document.getElementById('mNotes').value;
             task.label = document.getElementById('mLabel').value;
-            const rows = document.querySelectorAll('.subtask-item');
-            task.subtasks = Array.from(rows).map(row => ({
+            task.subtasks = Array.from(document.querySelectorAll('.subtask-item')).map(row => ({
                 text: row.querySelector('input[type="text"]').value,
                 done: row.querySelector('input[type="checkbox"]').checked
             }));
@@ -203,28 +219,29 @@
             saveState();
         }
 
+        // --- RENDER ---
         function render() {
             const board = document.getElementById('board');
             board.innerHTML = '';
-
             COLUMNS.forEach(col => {
                 const colEl = document.createElement('div');
                 colEl.className = 'column'; colEl.id = col.id;
                 colEl.ondragover = allowDrop; colEl.ondrop = drop;
-                colEl.innerHTML = `<div class="col-header"><span>${col.title}</span><button onclick="addTask('${col.id}')">+</button></div>`;
+                
+                let headerExtra = `<button onclick="addTask('${col.id}')">+</button>`;
+                if (col.id === 'done') headerExtra = `<div><button onclick="clearDoneTasks()" title="Archive All Done" style="margin-right:5px">📦</button><button onclick="addTask('${col.id}')">+</button></div>`;
+
+                colEl.innerHTML = `<div class="col-header"><span>${col.title}</span>${headerExtra}</div>`;
                 
                 const taskList = document.createElement('div');
                 state.tasks.filter(t => t.status === col.id).forEach(t => {
                     const card = document.createElement('div');
                     card.className = 'card'; card.draggable = true; card.id = t.id;
                     card.ondragstart = drag;
-                    card.onclick = (e) => { if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') openModal(t.id, false); };
-                    card.oncontextmenu = (e) => { e.preventDefault(); if(confirm('Delete?')) { state.tasks = state.tasks.filter(x => x.id !== t.id); saveState(); }};
+                    card.onclick = (e) => { if(!['INPUT', 'BUTTON'].includes(e.target.tagName)) openModal(t.id, false); };
                     
-                    // Find Label Info
                     const labelInfo = LABELS.find(l => l.id === t.label);
                     const labelHtml = labelInfo ? `<div class="badge" style="background:${labelInfo.color}">${labelInfo.title}</div>` : '';
-
                     card.innerHTML = labelHtml + `<div><strong>${t.title}</strong></div>` + 
                         (col.id === 'done' ? `<input type="checkbox" class="done-check" title="Archive" onclick="archiveTask('${t.id}')">` : '') +
                         `<div class="card-meta">${t.subtasks.length > 0 ? '☑ ' + t.subtasks.filter(s => s.done).length + '/' + t.subtasks.length : ''} ${t.notes ? '📄' : ''}</div>`;
@@ -238,6 +255,15 @@
                     arc.innerHTML = `<span class="archive-toggle" onclick="state.archiveOpen = !state.archiveOpen; saveState()">${state.archiveOpen ? '▲ Hide' : '▼ Show'} Archive (${state.archived.length})</span>`;
                     const content = document.createElement('div');
                     content.className = 'archive-content' + (state.archiveOpen ? ' open' : '');
+                    
+                    if (state.archived.length > 0) {
+                        const clearBtn = document.createElement('button');
+                        clearBtn.className = 'btn btn-clear-archive';
+                        clearBtn.innerText = '🗑️ Delete Entire Archive';
+                        clearBtn.onclick = clearArchive;
+                        content.appendChild(clearBtn);
+                    }
+
                     state.archived.forEach(t => {
                         const aCard = document.createElement('div');
                         aCard.className = 'card'; aCard.style.opacity = '0.7';
