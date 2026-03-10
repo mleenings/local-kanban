@@ -6,111 +6,76 @@ A professional, offline-first Kanban board designed for software engineers who v
 This system allows you to manage tasks without any external dependencies. It follows the **First Principles** of developer productivity:
 1. **Visualization:** High-level overview of your current workflow.
 2. **Context Persistence:** Each card acts as a gateway to your local file-system notes.
-3. **Quality Gates:** Integrated checklists and a local "Definition of Done" (DoD) ensure high standards before verification.
+3. **Quality Gates:** Integrated checklists and a local "Definition of Done" (DoD) ensure high standards.
 
 ---
 
-## 📂 Project Structure
+## 📂 Project Structure (Recommended)
 
-For maximum efficiency, use the board in combination with a structured file system:
+Similar to **VS Code Portable**, this tool is designed to live directly within your project root or a dedicated workspace folder.
 
 ```text
-/my-project-root
+/my-kanban-workspace
 │
-├── board.html               # Visual planning tool (Single-file HTML/JS)
+├── board.html               # The App (Single-file HTML/JS)
+├── data.json                # AUTOMATIC: Your database (Sync Target)
 ├── README.md                # This documentation
 │
 ├── /_template               # BLUEPRINT: Copy this for every new task
-│   ├── notes.md             # Technical analysis, decisions & research
-│   └── dod.md               # Local "Definition of Done" checklist
+│   ├── notes.md             # Technical analysis & decisions
+│   └── dod.md               # Local DoD checklist
 │
 └── /tasks                   # Active deep-dive task data
-    ├── /TASK-ID-name        # EXAMPLE: Concrete task folder
-    │   ├── meta.md          # Filled with specific Jira links, PO contact, etc.
-    │   ├── notes.md         # Technical implementation details of the fix
-    │   ├── dod.md           # Checked checklist for this specific task
-    │   ├── error.log        # (Optional) Attached raw log data
-    │   ├── screenshot.png   # (Optional) Visual proof of the resolved bug 
-    └── /archive             # Move finished task FOLDERS here manually
+    └── /TASK-ID-name        # Folders for complex documentation
 ```
+
+---
+
+## ⚙️ Data Persistence & Auto-Sync
+
+This version utilizes the modern **File System Access API**. It behaves like a native desktop application within your browser environment.
+
+### 1. Initial Setup
+* Create an empty file named `data.json` in your project folder (or use an existing export file).
+* Open `board.html` in a modern browser (Chrome or Edge recommended).
+* Click the **"🔗 Start Auto-Sync with data.json"** button at the top.
+* Select your `data.json` file in the file picker.
+
+### 2. The "Portable App" Workflow
+* **The Handshake:** Due to browser security restrictions, the file permission is revoked when the tab is closed. Make it a habit to click the **Sync** button once every time you open the board.
+* **Invisible Execution:** Once the connection is established, **every action** (moving cards, editing notes, deleting tasks) is immediately and silently written to your `data.json`.
+* **Redundancy:** The board simultaneously updates the browser's `localStorage` as a secondary safety net.
 
 ---
 
 ## 🛠 Workflow Logic
 
-This board uses a **Lean 6-Column Pipeline** to keep the interface clean while maintaining strict quality gates:
+The board uses a **Lean 6-Column Pipeline** to maintain strict quality gates:
 
 1. **Backlog:** Future ideas and unprioritized tasks.
-2. **To Do:** Tasks committed for the current session/sprint.
-3. **In Progress:** Active development. **Requirement:** Follow the local `DoD.md` here.
-4. **To Verify:** Local development is finished. Card stays here for a "fresh eyes" review or final local double-check.
-5. **Dev-Env Test:** Task is deployed to the dev/integration environment and awaits final verification in a live-like setting.
-6. **Done:** Task is complete.
+2. **To Do:** Tasks committed for the current session or sprint.
+3. **In Progress:** Active development. Follow the local `DoD.md` templates here.
+4. **To Verify:** Development is finished. Awaiting final local review.
+5. **Dev-Env Test:** Verified in a live-like integration environment.
+6. **Done:** Task is complete and ready for archival.
 
 ---
 
 ## ✨ Features
 
-* **Single-File App:** Works offline in any modern browser without installation.
-* **Template-Driven:** Encourages a consistent documentation style via the `/_template` folder.
-* **Smart Archive:** * Checking a task in the **Done** column moves it to the collapsible UI Archive.
-    * Unchecking a task in the **Archive** restores it to the active Done list.
-* **Data Portability:** Integrated **Export & Import** functions to save your state as a `.json` file.
-* **Developer UX:** Drag-and-drop movement and right-click to delete.
+* **Zero-Install Desktop Feel:** No Node.js, Python, or database installation required.
+* **True Auto-Save:** Behaves like local software once the initial file handshake is complete.
+* **Smart Archive:** Completed tasks are moved to a collapsible UI archive but remain persisted in the JSON file.
+* **Developer UX:** Lightweight, drag-and-drop enabled, and designed for speed.
 
 ---
 
-## ⚙️ Customization
+## ⚠️ Important Note on Persistence
 
-The board is designed to be easily configurable via the constant arrays at the top of the `<script>` section in the HTML file.
-
-### 1. Label System (Optional)
-The `LABELS` array allows you to define projects or categories with specific colors. If this array is empty (`[]`), all label-related UI elements will be hidden automatically.
-
-```javascript
-const LABELS = [
-    { id: 'alpha', title: 'Alpha-Project', color: '#0052cc' },
-    { id: 'beta', title: 'Beta-Service', color: '#eb5a46' }
-];
-```
-
-* **id**: Unique identifier stored within the task data.
-* **title**: Display name shown on cards and in the selection menu.
-* **color**: CSS color (Hex, RGB, or Name) for the badge background.
-
-### 2. Board Columns
-You can modify the `COLUMNS` array to match your specific workflow (e.g., adding a "Ready for Release" stage).
-
-```javascript
-const COLUMNS = [
-    { id: 'backlog', title: 'Backlog' },
-    // ... add or remove stages here
-    { id: 'done', title: 'Done' }
-];
-```
-
----
-
-## 🛠 Technical Details
-
-- **Data Persistence**: Uses `localStorage` (Key: `kanban_v6`).
-- **Data Model**:
-  - `tasks`: Active tasks currently on the board.
-  - `archived`: Tasks moved to the archive.
-  - `archiveOpen`: Persistent UI state of the archive toggle.
-- **Label Mapping**: Tasks store only the label `id`. Visual properties (color/title) are mapped at runtime to ensure consistency across the application.
-
----
-
-## ⚠️ Data & Persistence
-
-* **Storage:** Data is stored in your browser's `localStorage`.
-* **Risk:** Clearing browser cache/site data **will wipe the board**.
-* **Best Practice:** 1. Use the **Export** button daily to save a JSON backup.
-    2. Since your `/tasks` folders are on your disk, keep the root folder under **Git version control** for full redundancy.
+The browser "forgets" the file handle upon closing the tab for security reasons. 
+**Best Practice:** Always check the status indicator in the header. If it says **"Offline"**, click the Sync button to ensure your `data.json` stays updated with your latest changes.
 
 ---
 
 ## ⚖️ License
-
 This project is licensed under the **MIT License**.
