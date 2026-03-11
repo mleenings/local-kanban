@@ -38,7 +38,7 @@ A local-first, professional Kanban board designed for software engineers. It ope
 - **Project Title:** The title in the header is editable; it updates the JSON and the browser tab title.
 - **Responsiveness:** Clean, developer-centric design using CSS variables and system fonts.
 
-### 6.Other ####
+### 6. Other ####
 - **Title** : Title of the html should be 'Dev Kanban' 
 
 ## 💾 Expected JSON Structure
