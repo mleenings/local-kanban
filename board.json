@@ -12,6 +12,7 @@
   ],
   "archived": [],
   "config": {
+    "projectTitle": "Customer XYZ - Projekt ABC",
     "columns": [
       {
         "id": "backlog",
