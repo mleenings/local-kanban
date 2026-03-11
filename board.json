@@ -1,0 +1,88 @@
+{
+  "tasks": [
+    {
+      "id": "id-123456789",
+      "title": "Example Task",
+      "status": "todo",
+      "label": "alpha",
+      "priority": "mid",
+      "notes": "This is an initial Example-Task.",
+      "subtasks": []
+    }
+  ],
+  "archived": [],
+  "config": {
+    "columns": [
+      {
+        "id": "backlog",
+        "title": "Backlog"
+      },
+      {
+        "id": "todo",
+        "title": "To Do"
+      },
+      {
+        "id": "clarify",
+        "title": "To Clarify"
+      },
+      {
+        "id": "action",
+        "title": "Action Required"
+      },
+      {
+        "id": "progress",
+        "title": "In Progress"
+      },
+      {
+        "id": "test_local",
+        "title": "To Test (Local)"
+      },
+      {
+        "id": "review",
+        "title": "In Review"
+      },
+      {
+        "id": "verify_env",
+        "title": "Verify (Env)"
+      },
+      {
+        "id": "done",
+        "title": "Done"
+      }
+    ],
+    "labels": [
+      {
+        "id": "alpha",
+        "title": "Alpha-Project",
+        "color": "#0052cc"
+      },
+      {
+        "id": "beta",
+        "title": "Beta-Service",
+        "color": "#eb5a46"
+      },
+      {
+        "id": "infra",
+        "title": "Infrastructure",
+        "color": "#5aac44"
+      }
+    ],
+    "priorities": [
+      {
+        "id": "high",
+        "title": "Hoch",
+        "color": "#eb5a46"
+      },
+      {
+        "id": "mid",
+        "title": "Mittel",
+        "color": "#f2d600"
+      },
+      {
+        "id": "low",
+        "title": "Niedrig",
+        "color": "#61bd4f"
+      }
+    ]
+  }
+}
