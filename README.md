@@ -1,81 +1,87 @@
-# Local Kanban Board
+# Local Development Kanban Board
 
-A professional, offline-first Kanban board designed for software engineers who value deep task context and data sovereignty. This tool bridges the gap between visual high-level planning and low-level technical documentation.
+A professional, offline-first Kanban board designed for software engineers. It prioritizes data sovereignty, flexible workflow mapping, and a seamless link to local technical documentation.
 
 ## 🚀 Purpose
-This system allows you to manage tasks without any external dependencies. It follows the **First Principles** of developer productivity:
-1. **Visualization:** High-level overview of your current workflow.
-2. **Context Persistence:** Each card acts as a gateway to your local file-system notes.
-3. **Quality Gates:** Integrated checklists and a local "Definition of Done" (DoD) ensure high standards.
+This tool follows the **First Principles** of developer productivity:
+1.  **Visualization:** Flexible mapping of any engineering pipeline via JSON.
+2.  **Data Sovereignty:** All data, UI settings, and project metadata live in one human-readable file.
+3.  **Context Persistence:** Seamless transition between high-level status and local file-system documentation.
 
 ---
 
-## 📂 Project Structure (Recommended)
+## 📂 Project Structure
 
-Similar to **VS Code Portable**, this tool is designed to live directly within your project root or a dedicated workspace folder.
+The board is designed to live directly within your project root or a dedicated workspace.
 
 ```text
-/my-kanban-workspace
+/my-project-workspace
 │
-├── board.html               # The App (Single-file HTML/JS)
-├── data.json                # AUTOMATIC: Your database (Sync Target)
-├── README.md                # This documentation
+├── board.html             # The App (Single-file HTML/JS)
+├── board.json             # THE TRUTH: Title, Config, Tasks, and Archive
 │
-├── /_template               # BLUEPRINT: Copy this for every new task
-│   ├── notes.md             # Technical analysis & decisions
-│   └── dod.md               # Local DoD checklist
+├── /_template             # BLUEPRINT: Copy this for every new task
+│   ├── notes.md           # Technical analysis & decisions
+│   └── dod.md             # Local Definition of Done checklist
 │
-└── /tasks                   # Active deep-dive task data
-    └── /TASK-ID-name        # Folders for complex documentation
+└── /tasks                 # Active deep-dive task data
+    └── /TASK-ID-name      # Individual folders for documentation
 ```
 
 ---
 
-## ⚙️ Data Persistence & Auto-Sync
+## ⚙️ Configuration (board.json)
 
-This version utilizes the modern **File System Access API**. It behaves like a native desktop application within your browser environment.
+Die `board.json` steuert das gesamte Verhalten. Änderungen in der Datei werden beim nächsten Laden (oder nach dem Sync) sofort im UI reflektiert:
 
-### 1. Initial Setup
-* Create an empty file named `data.json` in your project folder (or use an existing export file).
-* Open `board.html` in a modern browser (Chrome or Edge recommended).
-* Click the **"🔗 Start Auto-Sync with data.json"** button at the top.
-* Select your `data.json` file in the file picker.
+### Anpassbare Parameter im `config`-Objekt:
+* **`projectTitle`**: Setzt den Namen im Header und im Browser-Tab (für Multitasking zwischen Projekten).
+* **`columns`**: Definiere beliebig viele Spalten mit `id` und `title`.
+* **`labels`**: Erstelle projektspezifische Badges mit `id`, `title` und Hex-`color`.
+* **`priorities`**: Definiere dein eigenes Prioritätssystem (z. B. P0-P4) inklusive Farben.
 
-### 2. The "Portable App" Workflow
-* **The Handshake:** Due to browser security restrictions, the file permission is revoked when the tab is closed. Make it a habit to click the **Sync** button once every time you open the board.
-* **Invisible Execution:** Once the connection is established, **every action** (moving cards, editing notes, deleting tasks) is immediately and silently written to your `data.json`.
-* **Redundancy:** The board simultaneously updates the browser's `localStorage` as a secondary safety net.
-
----
-
-## 🛠 Workflow Logic
-
-The board uses a **Lean 6-Column Pipeline** to maintain strict quality gates:
-
-1. **Backlog:** Future ideas and unprioritized tasks.
-2. **To Do:** Tasks committed for the current session or sprint.
-3. **In Progress:** Active development. Follow the local `DoD.md` templates here.
-4. **To Verify:** Development is finished. Awaiting final local review.
-5. **Dev-Env Test:** Verified in a live-like integration environment.
-6. **Done:** Task is complete and ready for archival.
-
----
-
-## ✨ Features
-
-* **Zero-Install Desktop Feel:** No Node.js, Python, or database installation required.
-* **True Auto-Save:** Behaves like local software once the initial file handshake is complete.
-* **Smart Archive:** Completed tasks are moved to a collapsible UI archive but remain persisted in the JSON file.
-* **Developer UX:** Lightweight, drag-and-drop enabled, and designed for speed.
+### Beispiel-Schema:
+```json
+{
+  "config": {
+    "projectTitle": "Kunde Alpha - Service Migration",
+    "columns": [
+      { "id": "backlog", "title": "Backlog" },
+      { "id": "todo", "title": "To Do" },
+      { "id": "progress", "title": "In Arbeit" },
+      { "id": "done", "title": "Erledigt" }
+    ],
+    "labels": [
+      { "id": "infra", "title": "Infrastructure", "color": "#5aac44" }
+    ],
+    "priorities": [
+      { "id": "high", "title": "Kritisch", "color": "#eb5a46" },
+      { "id": "mid", "title": "Standard", "color": "#f2d600" }
+    ]
+  },
+  "tasks": [],
+  "archived": []
+}
+```
 
 ---
 
-## ⚠️ Important Note on Persistence
+## 🛠 Setup & Workflow
 
-The browser "forgets" the file handle upon closing the tab for security reasons. 
-**Best Practice:** Always check the status indicator in the header. If it says **"Offline"**, click the Sync button to ensure your `data.json` stays updated with your latest changes.
+1.  **Sync-Handshake:** Öffne `board.html` und verknüpfe deine `board.json` über den Button oben rechts. Dieser "Handshake" ist nach jedem Refresh der Seite einmalig nötig.
+2.  **Edit Project Title:** Klicke direkt auf den Projekttitel im Header, um ihn zu ändern. Er wird sofort in der JSON gespeichert.
+3.  **Task Documentation:**
+    * Erstelle einen Task im Board.
+    * Erstelle manuell einen Ordner in `/tasks/` mit der generierten Task-ID.
+    * Nutze die Markdown-Templates aus `/_template` für die technische Dokumentation.
+4.  **Auto-Save:** Jede Interaktion (Verschieben, Editieren, Archivieren) wird sofort und lautlos in die `board.json` geschrieben.
+
+---
+
+## ⚠️ Connectivity Note
+Ein rotes **X** am Sync-Button bedeutet: **Read-Only**. Klicke den Button, um die Datei erneut zu verknüpfen und den automatischen Schreibzugriff zu aktivieren.
 
 ---
 
 ## ⚖️ License
-This project is licensed under the **MIT License**.
+MIT License - Open for engineering excellence.
