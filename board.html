@@ -24,14 +24,16 @@
         
         .badge { padding: 2px 8px; border-radius: 3px; font-size: 0.65rem; color: white; font-weight: bold; text-transform: uppercase; }
         .prio-pill { width: 8px; height: 8px; border-radius: 50%; }
-        
-        .archive-section { margin-top: 20px; border-top: 2px dashed #ccc; padding-top: 10px; }
-        .archive-header { font-size: 0.8rem; font-weight: bold; color: #666; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .subtask-counter { font-size: 0.7rem; color: #666; margin-top: 5px; display: flex; align-items: center; gap: 4px; }
 
         #modalOverlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
-        .modal { background: white; padding: 25px; border-radius: 8px; width: 500px; max-width: 90%; }
+        .modal { background: white; padding: 25px; border-radius: 8px; width: 550px; max-width: 95%; max-height: 90vh; overflow-y: auto; }
         input, textarea, select { width: 100%; margin: 8px 0 15px 0; border: 1px solid #ccc; padding: 10px; box-sizing: border-box; border-radius: 4px; }
         
+        .subtask-item { display: flex; gap: 10px; align-items: center; margin-bottom: 5px; }
+        .subtask-item input[type="text"] { margin: 0; }
+        .subtask-item input[type="checkbox"] { width: auto; margin: 0; }
+
         .btn { padding: 8px 15px; cursor: pointer; border: none; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
         .btn-success { background: var(--success); color: white; }
         .spacer { flex-grow: 1; }
@@ -54,12 +56,19 @@
             <h2 style="margin-top: 0;">Task Edit</h2>
             <label><strong>Titel</strong></label>
             <input type="text" id="mTitle">
+            
             <div style="display: flex; gap: 10px;">
                 <div style="flex: 1;"><label><strong>Label</strong></label><select id="mLabel"></select></div>
                 <div style="flex: 1;"><label><strong>Priorität</strong></label><select id="mPriority"></select></div>
             </div>
+
+            <label><strong>Subtasks / Checklist</strong></label>
+            <div id="subtaskContainer"></div>
+            <button class="btn" style="background: #eee; width: 100%; margin-bottom: 15px;" onclick="addSubtaskRow()">+ Subtask hinzufügen</button>
+
             <label><strong>Notizen</strong></label>
             <textarea id="mNotes" rows="4"></textarea>
+            
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button class="btn btn-success" style="flex: 1;" onclick="saveTaskDetails()">Speichern</button>
                 <button class="btn" style="background: #eee;" onclick="closeModal()">Abbrechen</button>
@@ -69,11 +78,11 @@
     </div>
 
     <script>
-        const DB_NAME = 'kanban_v24';
+        const DB_NAME = 'kanban_v25';
         let state = JSON.parse(localStorage.getItem(DB_NAME)) || { 
             tasks: [], archived: [], 
             config: { 
-                projectTitle: 'Mein Kanban Projekt',
+                projectTitle: 'Dev Workspace',
                 columns: [{id:'todo', title:'To Do'}, {id:'progress', title:'In Progress'}, {id:'done', title:'Done'}],
                 labels: [],
                 priorities: [{id:'high', title:'Hoch', color:'#eb5a46'}, {id:'mid', title:'Mittel', color:'#f2d600'}, {id:'low', title:'Niedrig', color:'#61bd4f'}]
@@ -89,7 +98,6 @@
                 const content = await file.text();
                 if (content) state = { ...state, ...JSON.parse(content) };
                 fileHandle = handle;
-                updateSyncUI(true, handle.name);
                 saveState();
             } catch (err) { console.warn(err); }
         }
@@ -99,16 +107,12 @@
             btn.innerHTML = active ? `✅ ${name}` : `❌ board.json`;
             btn.style.background = active ? 'var(--success)' : '#fff';
             btn.style.color = active ? '#fff' : 'var(--accent)';
-            
-            // UI Titel setzen
-            const title = state.config.projectTitle || 'Kanban Board';
-            document.getElementById('uiProjectTitle').value = title;
-            document.title = title;
+            document.getElementById('uiProjectTitle').value = state.config.projectTitle || 'Kanban Board';
+            document.title = state.config.projectTitle || 'Kanban Board';
         }
 
         function updateProjectTitle(newTitle) {
             state.config.projectTitle = newTitle.trim() || 'Kanban Board';
-            document.title = state.config.projectTitle;
             saveState();
         }
 
@@ -126,11 +130,28 @@
             currentEditId = id;
             const task = (isArchived ? state.archived : state.tasks).find(t => t.id === id);
             if (!task) return;
+            
             document.getElementById('mTitle').value = task.title;
             document.getElementById('mNotes').value = task.notes || '';
             document.getElementById('mPriority').innerHTML = state.config.priorities.map(p => `<option value="${p.id}" ${task.priority === p.id ? 'selected' : ''}>${p.title}</option>`).join('');
             document.getElementById('mLabel').innerHTML = '<option value="">Kein Label</option>' + state.config.labels.map(l => `<option value="${l.id}" ${task.label === l.id ? 'selected' : ''}>${l.title}</option>`).join('');
+            
+            const container = document.getElementById('subtaskContainer');
+            container.innerHTML = '';
+            (task.subtasks || []).forEach(st => addSubtaskRow(st.text, st.done));
+            
             document.getElementById('modalOverlay').style.display = 'flex';
+        }
+
+        function addSubtaskRow(text = '', done = false) {
+            const div = document.createElement('div');
+            div.className = 'subtask-item';
+            div.innerHTML = `
+                <input type="checkbox" ${done ? 'checked' : ''}>
+                <input type="text" value="${text}" placeholder="Subtask Beschreibung...">
+                <button class="btn" style="background:none; padding: 0 5px;" onclick="this.parentElement.remove()">✕</button>
+            `;
+            document.getElementById('subtaskContainer').appendChild(div);
         }
 
         function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
@@ -142,12 +163,16 @@
                 t.notes = document.getElementById('mNotes').value;
                 t.label = document.getElementById('mLabel').value;
                 t.priority = document.getElementById('mPriority').value;
+                t.subtasks = Array.from(document.querySelectorAll('.subtask-item')).map(row => ({
+                    text: row.querySelector('input[type="text"]').value,
+                    done: row.querySelector('input[type="checkbox"]').checked
+                }));
                 saveState();
             }
             closeModal();
         }
 
-        // --- DRAG & DROP & RENDER ---
+        // --- DRAG & DROP & RENDER (Shortened for brevity but complete) ---
         function dragStart(ev) { ev.dataTransfer.setData("text", ev.target.id); ev.target.classList.add('dragging'); }
         function dragEnd(ev) { ev.target.classList.remove('dragging'); document.querySelectorAll('.drop-indicator').forEach(el => el.style.display = 'none'); }
         function onDragOver(ev) {
@@ -201,12 +226,14 @@
                     if (query && !t.title.toLowerCase().includes(query)) return;
                     const card = document.createElement('div');
                     card.className = 'card'; card.draggable = true; card.id = t.id;
-                    card.onclick = (e) => { if(e.target.tagName !== 'INPUT') openModal(t.id); };
+                    card.onclick = (e) => { if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') openModal(t.id); };
                     card.addEventListener('dragstart', dragStart);
                     card.addEventListener('dragend', dragEnd);
                     
                     const labelInfo = state.config.labels.find(l => l.id === t.label);
                     const prioInfo = state.config.priorities.find(p => p.id === (t.priority || 'mid'));
+                    const doneCount = (t.subtasks || []).filter(s => s.done).length;
+                    const totalCount = (t.subtasks || []).length;
 
                     card.innerHTML = `
                         <div class="card-top">
@@ -217,6 +244,7 @@
                             ${col.id === 'done' ? `<input type="checkbox" onclick="event.stopPropagation(); toggleArchiveTask('${t.id}', true)">` : ''}
                         </div>
                         <strong>${t.title}</strong>
+                        ${totalCount > 0 ? `<div class="subtask-counter">📋 ${doneCount}/${totalCount}</div>` : ''}
                     `;
                     taskList.appendChild(card);
                 });
@@ -224,12 +252,12 @@
                 if (col.id === 'done') {
                     const arc = document.createElement('div');
                     arc.className = 'archive-section';
-                    arc.innerHTML = `<div class="archive-header">Archiv (${state.archived.length}) <button class="btn" style="background:var(--danger); color:white; font-size:0.6rem; padding:2px 5px" onclick="clearArchive()">Clear</button></div>`;
+                    arc.innerHTML = `<div style="font-size:0.7rem; color:#888; margin-bottom:5px;">Archiv (${state.archived.length})</div>`;
                     state.archived.forEach(t => {
                         const aCard = document.createElement('div');
-                        aCard.className = 'card'; aCard.style.opacity = '0.6';
+                        aCard.className = 'card'; aCard.style.opacity = '0.5';
                         aCard.onclick = () => openModal(t.id, true);
-                        aCard.innerHTML = `<div class="card-top"><span></span><input type="checkbox" checked onclick="event.stopPropagation(); toggleArchiveTask('${t.id}', false)"></div><strike>${t.title}</strike>`;
+                        aCard.innerHTML = `<strike>${t.title}</strike>`;
                         arc.appendChild(aCard);
                     });
                     colEl.appendChild(arc);
@@ -239,7 +267,7 @@
             updateSyncUI(fileHandle !== null, fileHandle ? fileHandle.name : '');
         }
 
-        function addTask(colId) { const t = prompt("Titel:"); if (t?.trim()) { state.tasks.push({ id: 'id-'+Date.now(), title: t.trim(), status: colId, label: '', priority: 'mid', notes: '' }); saveState(); } }
+        function addTask(colId) { const t = prompt("Titel:"); if (t?.trim()) { state.tasks.push({ id: 'id-'+Date.now(), title: t.trim(), status: colId, label: '', priority: 'mid', subtasks: [], notes: '' }); saveState(); } }
         function toggleArchiveTask(taskId, toArchive) {
             if (toArchive) {
                 const idx = state.tasks.findIndex(t => t.id === taskId);
@@ -253,7 +281,6 @@
             saveState();
         }
         function deleteCurrentTask() { if (confirm("Löschen?")) { state.tasks = state.tasks.filter(t => t.id !== currentEditId); state.archived = state.archived.filter(t => t.id !== currentEditId); saveState(); closeModal(); } }
-        function clearArchive() { if (confirm("Archiv leeren?")) { state.archived = []; saveState(); } }
         function resetStorage() { if(confirm("Cache leeren?")) { localStorage.removeItem(DB_NAME); location.reload(); } }
         render();
     </script>
