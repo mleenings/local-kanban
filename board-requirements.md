@@ -33,13 +33,19 @@ A local-first, professional Kanban board designed for software engineers. It ope
     - **Unchecking** a task in the Archive restores it to the active "Done" list.
 - **Purge:** Option to permanently delete all archived items.
 
-### 5. UI/UX Requirements
-- **Language:** UI, labels, placeholders, and technical comments must be in **English**.
-- **Project Title:** The title in the header is editable; it updates the JSON and the browser tab title.
-- **Responsiveness:** Clean, developer-centric design using CSS variables and system fonts.
 
-### 6. Other ####
-- **Title** : Title of the html should be 'Dev Kanban' 
+### 5. Daily Notes Feature
+- **Daily Prep Widget:** A dedicated side-panel or modal for daily stand-up preparation.
+- **Project Grouping:** Ability to generate a template that automatically groups current tasks by their assigned labels (Projects).
+- **Drafting:** The daily note is persisted in the state/JSON to prevent data loss during the day.
+
+### 6. UI/UX Requirements
+- **Language:** UI, labels, placeholders, and technical comments must be in **English**.
+- **Page Title:** The HTML `<title>` must be set to `Dev Kanban`.
+- **Project Title:** The title in the header is editable; it updates the JSON and the browser tab title.
+- **Editable Project Title:** The title in the header is editable; it updates the JSON and the browser tab title dynamically.
+- - **Favicon:** Use a data-URI SVG icon (📋) within the meta tags.
+- **Responsiveness:** Clean, developer-centric design (Dark Mode optimized) using CSS variables and system fonts.
 
 ## 💾 Expected JSON Structure
 ```json
@@ -50,7 +56,18 @@ A local-first, professional Kanban board designed for software engineers. It ope
     "labels": [{"id": "bug", "title": "Bug", "color": "#ff0000"}],
     "priorities": [{"id": "high", "title": "High", "color": "#ff0000"}]
   },
-  "tasks": [],
-  "archived": []
+  "tasks": [
+    {
+      "id": "id-123",
+      "title": "Fix Bug",
+      "status": "todo",
+      "label": "bug",
+      "priority": "high",
+      "subtasks": [{"text": "Investigate", "done": true}],
+      "notes": "..."
+    }
+  ],
+  "archived": [],
+  "dailyDraft": ""
 }
 ```
