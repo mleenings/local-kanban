@@ -33,8 +33,13 @@
         .archive-section { margin-top: 15px; border-top: 2px dashed #bdc3c7; padding-top: 10px; }
         .archive-title { font-size: 0.75rem; color: #7f8c8d; margin-bottom: 8px; font-weight: bold; display: flex; justify-content: space-between; }
 
-        #modalOverlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+        #modalOverlay, #dailyOverlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
         .modal { background: white; padding: 25px; border-radius: 8px; width: 550px; max-width: 95%; max-height: 90vh; overflow-y: auto; }
+        
+        /* Daily Widget Style */
+        #dailyWidget { display: none; position: fixed; right: 20px; top: 90px; width: 380px; background: white; z-index: 90; box-shadow: -5px 5px 20px rgba(0,0,0,0.3); border-radius: 8px; padding: 20px; flex-direction: column; border: 1px solid #ccc; }
+        #dailyText { width: 100%; height: 300px; font-family: 'Courier New', monospace; font-size: 13px; margin: 10px 0; padding: 10px; box-sizing: border-box; border: 1px solid #eee; resize: vertical; }
+
         label { display: block; margin-top: 10px; font-size: 0.85rem; color: #5e6c84; }
         input[type="text"], textarea, select { width: 100%; margin: 4px 0 12px 0; border: 1px solid #ccc; padding: 10px; box-sizing: border-box; border-radius: 4px; }
         
@@ -53,11 +58,23 @@
         <input type="text" id="uiProjectTitle" class="project-title" placeholder="Project Name..." onblur="updateProjectTitle(this.value)" onkeydown="if(event.key==='Enter') this.blur()">
         <div class="spacer"></div>
         <input type="text" id="searchInput" class="search-input" placeholder="Search tasks..." oninput="render()">
+        <button class="btn btn-warning" onclick="toggleDailyWidget()">📝 Daily Notes</button>
         <button class="btn" id="btnSync" onclick="linkFile()" style="background: #fff; color: var(--accent);">❌ Sync board.json</button>
         <button class="btn" onclick="resetStorage()" style="background: rgba(255,255,255,0.2); color: white;">Reset Cache</button>
     </div>
 
     <div class="board" id="board"></div>
+
+    <div id="dailyWidget">
+        <h2 style="margin-top:0">📅 Daily Prep</h2>
+        <p style="font-size: 0.75rem; color: #666; margin-bottom: 10px;">Projekte werden basierend auf genutzten Labels gruppiert.</p>
+        <textarea id="dailyText" placeholder="Schreibe hier dein Update..."></textarea>
+        <div style="margin-top: 15px; display: flex; gap: 8px;">
+            <button class="btn btn-success" style="flex: 1;" onclick="generateDailyTemplate()">Template laden</button>
+            <button class="btn" style="background: #eee;" onclick="copyDaily()">Copy</button>
+            <button class="btn" style="background: #eee;" onclick="toggleDailyWidget()">Close</button>
+        </div>
+    </div>
 
     <div id="modalOverlay">
         <div class="modal">
@@ -88,7 +105,7 @@
     <script>
         const DB_NAME = 'kanban_v29_en';
         let state = JSON.parse(localStorage.getItem(DB_NAME)) || { 
-            tasks: [], archived: [], 
+            tasks: [], archived: [], dailyDraft: "",
             config: { 
                 projectTitle: 'Engineering Board',
                 columns: [{id:'backlog', title:'Backlog'}, {id:'todo', title:'To Do'}, {id:'progress', title:'In Progress'}, {id:'done', title:'Done'}],
@@ -111,6 +128,7 @@
         }
 
         async function saveState() {
+            state.dailyDraft = document.getElementById('dailyText').value;
             localStorage.setItem(DB_NAME, JSON.stringify(state));
             if (fileHandle) {
                 const writable = await fileHandle.createWritable();
@@ -155,6 +173,55 @@
             updateSyncUI();
         }
 
+
+        // --- DAILY LOGIC ---
+        function toggleDailyWidget() {
+            const w = document.getElementById('dailyWidget');
+            const isVisible = w.style.display === 'flex';
+            w.style.display = isVisible ? 'none' : 'flex';
+            document.getElementById('board').style.marginRight = isVisible ? '0' : '400px';
+        }
+
+        function generateDailyTemplate() {
+            const dateStr = new Date().toLocaleDateString('de-DE');
+            let output = `### 📅 Daily Update: ${dateStr}\n\n`;
+
+            // Finde alle Labels, die momentan in Tasks genutzt werden
+            const activeLabelIds = [...new Set(state.tasks.map(t => t.label).filter(l => l))];
+            
+            if (activeLabelIds.length === 0) {
+                output += renderProjectBlock("Allgemein / No Label");
+            } else {
+                activeLabelIds.forEach(lId => {
+                    const labelCfg = state.config.labels.find(l => l.id === lId);
+                    output += renderProjectBlock(labelCfg ? labelCfg.title : lId);
+                });
+            }
+            
+            const currentText = document.getElementById('dailyText').value;
+            if (currentText && !confirm("Aktuellen Text mit Template überschreiben?")) return;
+            document.getElementById('dailyText').value = output;
+        }
+
+        function renderProjectBlock(name) {
+            return `## Projekt: ${name}\n` +
+                   `* **Done:**\n` +
+                   `    * [Ticket-ID] Task Name (Ergebnis/Status)\n` +
+                   `* **Next:**\n` +
+                   `    * Fokus auf [Ticket-ID]: Ziel für heute\n` +
+                   `* **Blocker / Impediments:**\n` +
+                   `    * ⚠️ / ❌ (Oder "Keine")\n\n` +
+                   `---\n\n`;
+        }
+
+        function copyDaily() {
+            const area = document.getElementById('dailyText');
+            area.select();
+            document.execCommand('copy');
+            alert("Markdown in die Zwischenablage kopiert!");
+        }
+
+        // --- UI HELPERS ---
         function createCard(t, isArchived) {
             const card = document.createElement('div');
             card.className = 'card';
@@ -210,6 +277,7 @@
             btn.style.color = fileHandle ? '#fff' : 'var(--accent)';
             document.getElementById('uiProjectTitle').value = state.config.projectTitle || 'Engineering Board';
             document.title = state.config.projectTitle || 'Engineering Board';
+            document.getElementById('dailyText').value = state.dailyDraft || "";
         }
 
         function openModal(id, isArchived) {
