@@ -50,6 +50,10 @@
         .btn:hover { opacity: 0.8; }
         .btn-success { background: var(--success); color: white; }
         .spacer { flex-grow: 1; }
+
+        .archive-title { cursor: pointer; user-select: none; }
+        .archive-title:hover { color: var(--accent); }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -104,6 +108,7 @@
 
     <script>
         const DB_NAME = 'kanban_v29_en';
+        let archiveExpanded = false;
         let state = JSON.parse(localStorage.getItem(DB_NAME)) || { 
             tasks: [], archived: [], dailyDraft: "",
             config: { 
@@ -161,16 +166,29 @@
                 if (col.id === 'done') {
                     const arcSection = document.createElement('div');
                     arcSection.className = 'archive-section';
-                    arcSection.innerHTML = `<div class="archive-title">ARCHIVE (${state.archived.length}) <span style="cursor:pointer" onclick="clearArchive()">Purge</span></div>`;
+                    arcSection.innerHTML = `
+                        <div class="archive-title" onclick="toggleArchiveVisibility()">
+                            ${archiveExpanded ? '▼' : '▶'} ARCHIVE (${state.archived.length}) 
+                            <span style="margin-left:auto; font-size:0.7rem; text-decoration:underline" onclick="event.stopPropagation(); clearArchive()">Purge</span>
+                        </div>`;
+                    const arcContent = document.createElement('div');
+                    if (!archiveExpanded) arcContent.style.display = 'none';
+                    
                     state.archived.forEach(t => {
                         if (query && !t.title.toLowerCase().includes(query)) return;
-                        arcSection.appendChild(createCard(t, true));
+                        arcContent.appendChild(createCard(t, true));
                     });
+                    arcSection.appendChild(arcContent);
                     colEl.appendChild(arcSection);
                 }
                 board.appendChild(colEl);
             });
             updateSyncUI();
+        }
+
+        function toggleArchiveVisibility() {
+            archiveExpanded = !archiveExpanded;
+            render(); // Nur neu zeichnen, nicht speichern
         }
 
 
