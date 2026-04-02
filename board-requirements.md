@@ -60,6 +60,9 @@ A local-first, professional Kanban board designed for software engineers. It ope
 - **Bottom-Pinned Horizontal Scroll:** - The horizontal scrollbar for navigating columns is the native browser scrollbar at the very bottom of the page.
 - **Sticky Header (Optional):**
     - The `.header-controls` should remain accessible, while the tasks scroll underneath them.
+- **Full-Width Board Constraint:**
+    - The `.board` container must always occupy `width: 100%` of the viewport.
+    - To prevent columns from being crushed on small screens, `min-width: min-content` must be applied to the board, triggering the global horizontal scrollbar only when the combined minimum widths of columns exceed the screen width.
 
 ### 8. Compact Mode (Toggle Switch)
 - **UI Element:** A dedicated vertical toggle switch in the header with a "COMPACT MODE" label.
@@ -71,12 +74,17 @@ A local-first, professional Kanban board designed for software engineers. It ope
     - **Card Titles:** Titles must be truncated with an ellipsis (`...`) and forced into a single line (`text-overflow: ellipsis`).
     - **Hover Preview:** Full task titles must be visible via the native browser tooltip (`title` attribute) when hovering over a truncated card in compact mode.
 - **Persistence:** The state of the Compact Mode toggle must be saved in the JSON configuration to maintain the user's preference across sessions.
+- **Visual Transformation:**
+    - **Dynamic Column Width:** Standard width is 300px. In Compact Mode, columns transition to a base of 180px.
+    - **Flex-Fill Growth:** In Compact Mode, columns must use `flex: 1 1 180px` combined with a `max-width` (e.g., 280px). This ensures that if the number of columns is small, they automatically grow to fill 100% of the horizontal screen width, eliminating empty space on the right.
+    - **Card Titles:** Titles must be truncated with an ellipsis (`...`) and forced into a single line (`white-space: nowrap; overflow: hidden; text-overflow: ellipsis;`).
 
 ## 💾 Expected JSON Structure
 ```json
 {
   "config": {
     "projectTitle": "Project Name",
+    "compact": true,
     "columns": [{"id": "todo", "title": "To Do"}],
     "labels": [{"id": "bug", "title": "Bug", "color": "#ff0000"}],
     "priorities": [{"id": "high", "title": "High", "color": "#ff0000"}]
