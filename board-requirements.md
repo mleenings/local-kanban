@@ -52,11 +52,14 @@ A local-first, professional Kanban board designed for software engineers. It ope
 - **Responsiveness:** Clean, developer-centric design (Dark Mode optimized) using CSS variables and system fonts.
 
 ### 7. Layout & Scrolling Behavior
-- **Fixed Viewport Strategy:**
-    - The `body` must be set to `height: 100vh` with `overflow: hidden` to prevent the entire page from scrolling vertically.
-    - The Board is the primary scrollable element (`flex-grow: 1`).
-- **Global Horizontal Scrollbar:** - The horizontal scrollbar for navigating columns must always be pinned to the **bottom of the browser window**, not directly under the columns, to ensure it is always accessible regardless of column height.
-- **Independent Column Scrolling:** - Each column (`.task-list`) must have its own vertical scrollbar (`overflow-y: auto`) to allow scrolling through long lists of tasks without moving the header.
+- **Global Page Scroll:**
+    - The `body` must handle both vertical and horizontal scrolling (`overflow: auto`).
+    - No "scroll-within-scroll": Columns do not have individual scrollbars.
+- **Natural Height:** - Columns expand vertically based on their content (`height: fit-content`).
+    - The browser's primary vertical scrollbar (on the far right) manages the entire board's height.
+- **Bottom-Pinned Horizontal Scroll:** - The horizontal scrollbar for navigating columns is the native browser scrollbar at the very bottom of the page.
+- **Sticky Header (Optional):**
+    - The `.header-controls` should remain accessible, while the tasks scroll underneath them.
 
 ### 8. Compact Mode (Toggle Switch)
 - **UI Element:** A dedicated vertical toggle switch in the header with a "COMPACT MODE" label.
