@@ -15,8 +15,8 @@
 
         .search-input { border: none; padding: 10px; border-radius: 4px; width: 220px; outline: none; }
 
-        .board { display: flex; gap: 15px; align-items: flex-start; padding-bottom: 40px; }
-        .column { background: var(--col); border-radius: 8px; width: 300px; flex-shrink: 0; display: flex; flex-direction: column; height: fit-content; }
+        .board { display: flex; gap: 15px; align-items: flex-start; padding-bottom: 40px; width: 100%; box-sizing: border-box; }
+        .column { background: var(--col); border-radius: 8px; width: 300px; flex-shrink: 0; display: flex; flex-direction: column; height: fit-content; transition: all 0.2s ease; }
         .col-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; margin-bottom: 10px; padding: 5px; }
         
         .task-list { flex-grow: 1; min-height: 50px; }
@@ -56,7 +56,7 @@
         .archive-title:hover { color: var(--accent); }
         .hidden { display: none !important; }
 
-        .compact-mode .column { width: 180px; }
+        .compact-mode .column { width: 180px; flex-grow: 1; max-width: 250px; }
         .compact-mode .card strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.8rem; }
         .compact-mode .card { padding: 6px; }
 
@@ -66,6 +66,13 @@
         .slider:before { position: absolute; content: ""; height: 10px; width: 10px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--success); }
         input:checked + .slider:before { transform: translateX(14px); }
+
+
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #172b4d; min-height: 100vh; overflow-x: auto; overflow-y: auto; display: block; }
+.board { display: flex; gap: 15px; align-items: flex-start; padding-bottom: 40px; width: 100%; min-width: min-content; box-sizing: border-box; }
+.column { background: var(--col); border-radius: 8px; width: 300px; flex: 0 0 300px; display: flex; flex-direction: column; height: fit-content; transition: all 0.2s ease; }
+.compact-mode .column { width: auto; flex: 1 1 180px; max-width: 280px; }
+.compact-mode .card strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -263,7 +270,9 @@
         function toggleCompact() {
             const isComp = document.getElementById('compactToggle').checked;
             state.config.compact = isComp;
-            document.getElementById('board').classList.toggle('compact-mode', isComp);
+            const board = document.getElementById('board');
+            if (isComp) board.classList.add('compact-mode'); 
+            else board.classList.remove('compact-mode');
             saveState();
         }
 
