@@ -51,6 +51,24 @@ A local-first, professional Kanban board designed for software engineers. It ope
 - - **Favicon:** Use a data-URI SVG icon (📋) within the meta tags.
 - **Responsiveness:** Clean, developer-centric design (Dark Mode optimized) using CSS variables and system fonts.
 
+### 7. Layout & Scrolling Behavior
+- **Fixed Viewport Strategy:**
+    - The `body` must be set to `height: 100vh` with `overflow: hidden` to prevent the entire page from scrolling vertically.
+    - The Board is the primary scrollable element (`flex-grow: 1`).
+- **Global Horizontal Scrollbar:** - The horizontal scrollbar for navigating columns must always be pinned to the **bottom of the browser window**, not directly under the columns, to ensure it is always accessible regardless of column height.
+- **Independent Column Scrolling:** - Each column (`.task-list`) must have its own vertical scrollbar (`overflow-y: auto`) to allow scrolling through long lists of tasks without moving the header.
+
+### 8. Compact Mode (Toggle Switch)
+- **UI Element:** A dedicated vertical toggle switch in the header with a "COMPACT MODE" label.
+- **Toggle Mechanism:**
+    - **Label:** The text "Compact Mode" must stay on a single line (`white-space: nowrap`).
+    - **Switch:** A modern, pill-shaped slider (Switch) located directly below the label.
+- **Visual Transformation:**
+    - **Column Width:** Shrinks from a standard width (e.g., 300px) to a compact width (e.g., 180px).
+    - **Card Titles:** Titles must be truncated with an ellipsis (`...`) and forced into a single line (`text-overflow: ellipsis`).
+    - **Hover Preview:** Full task titles must be visible via the native browser tooltip (`title` attribute) when hovering over a truncated card in compact mode.
+- **Persistence:** The state of the Compact Mode toggle must be saved in the JSON configuration to maintain the user's preference across sessions.
+
 ## 💾 Expected JSON Structure
 ```json
 {
