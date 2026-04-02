@@ -32,7 +32,11 @@ A local-first, professional Kanban board designed for software engineers. It ope
     - **Checking** the box moves the task to the **Archive Section** at the bottom of the "Done" column.
     - **Unchecking** a task in the Archive restores it to the active "Done" list.
 - **Purge:** Option to permanently delete all archived items.
-
+- **Collapsible Archive:**
+    - The Archive Section must be collapsible/expandable to save vertical space.
+    - **Visual Indicator:** Use toggle icons (e.g., ▶/▼) to indicate the current state.
+    - **Stateless Toggle:** The expansion state is UI-only and does not need to be persisted in the JSON.
+    - **Containment:** When collapsed, all archived cards must be completely hidden from the DOM flow (display: none).
 
 ### 5. Daily Notes Feature
 - **Daily Prep Widget:** A dedicated side-panel or modal for daily stand-up preparation.
